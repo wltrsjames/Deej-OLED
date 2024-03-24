@@ -41,6 +41,8 @@ https://www.amazon.co.uk/Spacers-Standoff-Assortment-Threaded-Circuit/dp/B09F9PH
 Fix the OLD screen to inside of the box with M2 screws and female nylon standoffs, the master pot is held in place with it's provided nut.
 The faders are also held in place with M2 screws.
 
+![](https://lh3.googleusercontent.com/d/1oyOMCNtQ6e5LRb_Ch5wdNRvWz6PDZCqS)
+
 In the case of the teensy 4.0 all of the analogue pots run off of 3v, the OLED screen and the LEDs are running off of the 5v pin.
 
 The Teensy has to be soldered to a protoboard with the correct holes and mounted at the correct height on the box cover
@@ -64,7 +66,7 @@ Pinouts:
 | D8 | Mute button 1 |
 | D9 | Mute button 2 |
 | D11 | Mute button 3 |
-| 10 | Mute button 4 |
+| D10 | Mute button 4 |
 | D4 | Mute LED 1 |
 | D5 | Mute LED 2 |
 | D2 | Mute LED 3 |
