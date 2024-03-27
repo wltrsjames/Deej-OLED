@@ -1,3 +1,5 @@
+Deej project: https://github.com/omriharel/deej/
+
 ## Yet another volume mixer, but with some cool features
 
  - 5 volume faders
