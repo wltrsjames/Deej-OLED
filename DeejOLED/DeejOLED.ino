@@ -1,4 +1,13 @@
+#include "Animations.h"
+#include "OLED_init.h"
+
 #include <Keyboard.h>
+
+const int NUM_SLIDERS = 6;
+const char *inputLabels[NUM_SLIDERS] = { "Master", "Discord", "Browser", "Music", "Current App", "Mic" };
+// make sure each hotkey combo ends with 0
+const int hotKeys[][3] = { { 0 }, { 0 }, { 0 }, { 0 }, { KEY_LEFT_CTRL, KEY_F12, 0 } };
+
 //if starting up
 boolean startUp = true;
 //if an input has been adjusted
@@ -16,10 +25,7 @@ unsigned long volumeSliderTimeout = 3000;
 int randNumber;
 
 //POT info
-const int NUM_SLIDERS = 6;
-const int MAX_POT_VALUE = 890;
 const int analogInputs[NUM_SLIDERS] = { A0, A1, A6, A3, A7, A8 };
-const char *inputLabels[NUM_SLIDERS] = { "Master", "Discord", "Browser", "Music", "Current App", "Mic" };
 
 const int NUM_BUTTONS = 5;
 const int digitalInputs[NUM_BUTTONS] = { 8, 9, 11, 10, 7 };
@@ -33,13 +39,6 @@ int filteredSliderValues[NUM_SLIDERS];
 int lastChangedInput;
 //sets the amount of cycles until the input is read for analog inputs
 const int noiseGate = 2;
-
-//storage for how many cycles the analog inputs have remained the same
-int cyclesConsistant[NUM_SLIDERS];
-
-// values that drive the noise filtering
-float EMA_a = 0.09;  //initialization of EMA alpha
-int EMA_S = 0;
 
 bool buttonState[NUM_BUTTONS] = { 0, 0, 0, 0, 0 };
 bool ledState[NUM_BUTTONS] = { 0, 0, 0, 0, 0 };
@@ -58,7 +57,6 @@ void setup() {
   // init buttons
   for (int i = 0; i < NUM_BUTTONS; i++) {
     pinMode(digitalInputs[i], INPUT_PULLUP);
-    //    attachInterrupt(digitalPinToInterrupt(digitalInputs[i]), buttonPressed, RISING );
   }
 
   // init leds
@@ -72,7 +70,7 @@ void setup() {
     pinMode(analogInputs[i], INPUT);
   }
 
-  drawAnimation(chickenAnimation, chickenAnimationLength, true, 10, 1, false, (char *)"Deej Nuts");
+  drawAnimation(chickenAnimation, chickenAnimationLength, true, 10, 1, false, (char *)"Deej OLED");
 
   // turn off all lights
   for (int i = 0; i < NUM_SLIDERS - 2; i++) {
@@ -108,13 +106,6 @@ void loop() {
   }
 }
 
-int getRNG() {
-  int iRandom1 = analogRead(2) & 0x7;
-  int iRandom2 = (analogRead(4) & 0x7) << 3;
-  int iRandom3 = (analogRead(9) & 0x7) << 6;
-  return iRandom1 + iRandom2 + iRandom3;
-}
-
 void drawAnimation(const unsigned char animation[][1024], int totalFrames, bool invertColours, unsigned long frameTime, int totalLoops, boolean adjustSliderValues, String message) {
   display.invertDisplay(invertColours);
   for (int loop = 0; loop < totalLoops; loop++) {
@@ -123,7 +114,7 @@ void drawAnimation(const unsigned char animation[][1024], int totalFrames, bool 
 
       //update and send the slider values in the render loop for optomisation
       if (adjustSliderValues) {
-        updateSliderValues(frameTime);
+        updateSliderValues();
         sendSliderValues();
       }
 
@@ -172,34 +163,33 @@ void drawMessage(String message) {
   display.println(message);
 }
 
-void updateSliderValues(int animationFrameTime) {
+void updateSliderValues() {
   for (int i = 0; i < NUM_SLIDERS; i++) {
+    int lastValue = filteredSliderValues[i];
+    int filteredValue;
+
     if (i != 0 && ledState[i - 1]) {
       filteredSliderValues[i] = 0;
+      filteredValue = 0;
       analogSliderValues[i] = 0;
-
-      lastChangedInput = i;
-      inputAdjusted = true;
-      uiTimerRestarted = true;
     } else {
       int currentValue = map(analogRead(analogInputs[i]), 1023, 0, 0, 1023);
       analogSliderValues[i] = currentValue;
-      int filteredValue = map(currentValue, 0, 1023, 0, 100);
+      filteredValue = map(currentValue, 0, 1023, 0, 100);
+    }
 
-      int lastValue = filteredSliderValues[i];
-      int diff = lastValue - filteredValue;
+    int diff = lastValue - filteredValue;
 
-      //if the filtered value has changed and has changed by the noise gate
-      if (lastValue != filteredValue && (diff >= noiseGate || diff <= -noiseGate)) {
-        if (!startUp) {
-          inputAdjusted = true;
-        }
-        filteredSliderValues[i] = filteredValue;
-        lastChangedInput = i;
-        uiTimerRestarted = true;
-      } else {
-        uiTimer();
+    //if the filtered value has changed and has changed by the noise gate
+    if (lastValue != filteredValue && (diff >= noiseGate || diff <= -noiseGate)) {
+      if (!startUp) {
+        inputAdjusted = true;
       }
+      filteredSliderValues[i] = filteredValue;
+      lastChangedInput = i;
+      uiTimerRestarted = true;
+    } else {
+      uiTimer();
     }
   }
   startUp = false;
@@ -253,11 +243,16 @@ void readButtons() {
     if (!lastButtonState && buttonState[i]) {
       ledState[i] = !ledState[i];
 
-      if (i == NUM_BUTTONS - 1) {
-        Keyboard.press(KEY_LEFT_CTRL);
-        Keyboard.press(KEY_F12);
-        delay(100);
-        Keyboard.releaseAll();
+      const int* hotKeyCombo = hotKeys[i];
+      const int hotKeyComboLength = sizeof (hotKeyCombo[0]);
+
+      for (int j = 0; j < hotKeyComboLength; j++) {
+        if (hotKeyCombo[j] == 0) {
+          delay(100);
+          Keyboard.releaseAll();
+          break;
+        };
+        Keyboard.press(hotKeyCombo[j]);
       }
     }
 
